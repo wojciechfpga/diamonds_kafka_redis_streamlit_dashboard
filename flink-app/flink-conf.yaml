@@ -1,0 +1,35 @@
+# =======================
+# JobManager settings
+# =======================
+jobmanager.rpc.address: flink-jobmanager   # adres hosta JobManagera
+jobmanager.rpc.port: 6123
+jobmanager.bind-host: 0.0.0.0
+jobmanager.memory.process.size: 1600m
+jobmanager.execution.failover-strategy: region
+
+# =======================
+# TaskManager settings
+# =======================
+taskmanager.bind-host: 0.0.0.0
+taskmanager.host: flink-taskmanager
+taskmanager.memory.process.size: 1728m
+taskmanager.numberOfTaskSlots: 1
+
+# =======================
+# Parallelism
+# =======================
+parallelism.default: 1
+
+# =======================
+# REST API
+# =======================
+rest.address: flink-jobmanager      # adres, pod którym klient może znaleźć JobManagera
+rest.bind-address: 0.0.0.0          # interfejs, na którym nasłuchuje JobManager
+rest.port: 8081
+
+# =======================
+# Logging (opcjonalne)
+# =======================
+log4j.logger.org.apache.flink=DEBUG
+log4j.logger.org.apache.flink.streaming.api.graph=DEBUG
+log4j.logger.org.apache.flink.util.InstantiationUtil=DEBUG

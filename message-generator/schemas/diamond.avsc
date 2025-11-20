@@ -1,0 +1,20 @@
+{
+  "namespace": "diamonds",
+  "type": "record",
+  "name": "DiamondEvent",
+  "fields": [
+    {"name": "id", "type": "string"},
+    {"name": "carat", "type": "float"},
+    {"name": "cut", "type": "string"},
+    {"name": "color", "type": "string"},
+    {"name": "clarity", "type": "string"},
+    {"name": "depth", "type": "float"},
+    {"name": "table", "type": "float"},
+    {"name": "price", "type": "float"},
+    {"name": "x", "type": "float"},
+    {"name": "y", "type": "float"},
+    {"name": "z", "type": "float"},
+    {"name": "sold_copies", "type": "int"},
+    {"name": "timestamp", "type": "long"}
+  ]
+}
