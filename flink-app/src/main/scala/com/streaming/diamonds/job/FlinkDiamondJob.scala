@@ -6,38 +6,40 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.connector.kafka.sink.{KafkaSink, KafkaRecordSerializationSchema}
 import org.apache.flink.formats.avro.registry.confluent.ConfluentRegistryAvroSerializationSchema
-
+import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo
 import org.apache.avro.generic.{GenericRecord, GenericData}
 import org.apache.flink.api.common.typeinfo.TypeInformation
+
+// Importy domenowe
 import com.streaming.diamonds.model.Diamond
 import com.streaming.diamonds.avro.{DiamondAvroDeserializer, OutputSchema}
 import com.streaming.diamonds.preprocessing.DiamondPreprocessor
 import com.streaming.diamonds.prediction.DiamondPriceTreePredictor
 
-import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo
+// Import stałych
+import com.streaming.diamonds.constants.JobConstants
 
 object FlinkDiamondJob {
   def main(args: Array[String]): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
-    // env.setParallelism(1) 
+    // env.setParallelism(1)
 
-    val schemaRegistryUrl = "http://schema-registry:8081"
-    val outputTopic = "diamonds-output-full"
-
+    // --- Source Definition ---
     val source = KafkaSource.builder[Diamond]()
-      .setBootstrapServers("broker-1:19092")
-      .setTopics("diamonds")
-      .setGroupId("flink-diamonds-group")
+      .setBootstrapServers(JobConstants.Kafka.BootstrapServers)
+      .setTopics(JobConstants.Kafka.InputTopic)
+      .setGroupId(JobConstants.Kafka.GroupId)
       .setStartingOffsets(OffsetsInitializer.latest())
-      .setValueOnlyDeserializer(new DiamondAvroDeserializer(schemaRegistryUrl))
+      .setValueOnlyDeserializer(new DiamondAvroDeserializer(JobConstants.SchemaRegistry.Url))
       .build()
 
     val inputStream: DataStream[Diamond] = env.fromSource(
       source,
       WatermarkStrategy.noWatermarks[Diamond](),
-      "kafka-source-diamonds"
+      JobConstants.FlinkOps.SourceName
     )
 
+    // --- Transformation ---
     implicit val avroTypeInfo: TypeInformation[GenericRecord] = 
       new GenericRecordAvroTypeInfo(OutputSchema.DiamondScore)
 
@@ -47,24 +49,26 @@ object FlinkDiamondJob {
         val score = DiamondPriceTreePredictor.predict(pre)
 
         val record = new GenericData.Record(OutputSchema.DiamondScore)
-        record.put("id", diamond.id)
-        record.put("price", diamond.price)
-        record.put("calculated_score", score)
+        // Używamy stałych nazw pól, aby uniknąć literówek
+        record.put(JobConstants.FieldNames.Id, diamond.id)
+        record.put(JobConstants.FieldNames.Price, diamond.price)
+        record.put(JobConstants.FieldNames.CalculatedScore, score)
         
         record.asInstanceOf[GenericRecord] 
       } 
-      .name("preprocess-and-predict")
+      .name(JobConstants.FlinkOps.TransformationName)
 
+    // --- Sink Definition ---
     val sink: KafkaSink[GenericRecord] = KafkaSink.builder[GenericRecord]()
-      .setBootstrapServers("broker-1:19092")
+      .setBootstrapServers(JobConstants.Kafka.BootstrapServers)
       .setRecordSerializer(
         KafkaRecordSerializationSchema.builder[GenericRecord]()
-          .setTopic(outputTopic)
+          .setTopic(JobConstants.Kafka.OutputTopic)
           .setValueSerializationSchema(
             ConfluentRegistryAvroSerializationSchema.forGeneric(
-              s"$outputTopic-value",
+              s"${JobConstants.Kafka.OutputTopic}-value", // Dynamiczne budowanie subject name
               OutputSchema.DiamondScore,
-              schemaRegistryUrl
+              JobConstants.SchemaRegistry.Url
             )
           )
           .build()
@@ -73,8 +77,8 @@ object FlinkDiamondJob {
 
     outputStream
       .sinkTo(sink)
-      .name("kafka-sink-output")
+      .name(JobConstants.FlinkOps.SinkName)
 
-    env.execute("Flink Diamond Price Prediction Job")
+    env.execute(JobConstants.FlinkOps.JobName)
   }
 }
