@@ -10,13 +10,11 @@ import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo
 import org.apache.avro.generic.{GenericRecord, GenericData}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 
-// Importy domenowe
 import com.streaming.diamonds.model.Diamond
 import com.streaming.diamonds.avro.{DiamondAvroDeserializer, OutputSchema}
 import com.streaming.diamonds.preprocessing.DiamondPreprocessor
 import com.streaming.diamonds.prediction.DiamondPriceTreePredictor
 
-// Import stałych
 import com.streaming.diamonds.constants.JobConstants
 
 object FlinkDiamondJob {
@@ -24,7 +22,6 @@ object FlinkDiamondJob {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // env.setParallelism(1)
 
-    // --- Source Definition ---
     val source = KafkaSource.builder[Diamond]()
       .setBootstrapServers(JobConstants.Kafka.BootstrapServers)
       .setTopics(JobConstants.Kafka.InputTopic)
@@ -39,7 +36,6 @@ object FlinkDiamondJob {
       JobConstants.FlinkOps.SourceName
     )
 
-    // --- Transformation ---
     implicit val avroTypeInfo: TypeInformation[GenericRecord] = 
       new GenericRecordAvroTypeInfo(OutputSchema.DiamondScore)
 
@@ -49,7 +45,6 @@ object FlinkDiamondJob {
         val score = DiamondPriceTreePredictor.predict(pre)
 
         val record = new GenericData.Record(OutputSchema.DiamondScore)
-        // Używamy stałych nazw pól, aby uniknąć literówek
         record.put(JobConstants.FieldNames.Id, diamond.id)
         record.put(JobConstants.FieldNames.Price, diamond.price)
         record.put(JobConstants.FieldNames.CalculatedScore, score)
@@ -58,7 +53,6 @@ object FlinkDiamondJob {
       } 
       .name(JobConstants.FlinkOps.TransformationName)
 
-    // --- Sink Definition ---
     val sink: KafkaSink[GenericRecord] = KafkaSink.builder[GenericRecord]()
       .setBootstrapServers(JobConstants.Kafka.BootstrapServers)
       .setRecordSerializer(
