@@ -60,7 +60,7 @@ object FlinkDiamondJob {
           .setTopic(JobConstants.Kafka.OutputTopic)
           .setValueSerializationSchema(
             ConfluentRegistryAvroSerializationSchema.forGeneric(
-              s"${JobConstants.Kafka.OutputTopic}-value", // Dynamiczne budowanie subject name
+              s"${JobConstants.Kafka.OutputTopic}-value", 
               OutputSchema.DiamondScore,
               JobConstants.SchemaRegistry.Url
             )
